@@ -7,7 +7,7 @@ Test querying different versions of the Camtrap DP model.
 The [script](src/query.Rmd) aims to return the following result:
 
 ```
-observationID,scientificName,minTimestamp,maxTimestamp,deploymentID
+observationID,scientificName,minTimestamp,maxTimestamp,sequenceID,deploymentID
 ```
 
 With a **single SQL query** for both image and sequence based data.
@@ -16,4 +16,5 @@ With a **single SQL query** for both image and sequence based data.
 
 - [mediaGroupID](data/raw/mediaGroupID): both image and sequence based
 - [parentMediaID](data/raw/parentMediaID): both image and sequence based
+- [sequenceID](data/raw/sequenceID): both image and sequence based
 - [current model (v0.1.7)](data/raw/current)
