@@ -1,0 +1,152 @@
+---
+title: 'Join data'
+author: "Peter Desmet"
+date: "8", "10", "2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+library(dplyr)
+library(here)
+library(DBI)
+library(RSQLite)
+```
+
+# mediaGroupID approach
+
+```{r}
+sql_mediaGroupID <- "
+SELECT
+  obs.observationID,
+  obs.scientificName,
+  med.minTimestamp,
+  med.maxTimestamp,
+  dep.deploymentID
+FROM
+  obs
+  LEFT JOIN 
+    (
+      SELECT
+        mediaGroupID,
+        deploymentID,
+        strftime('%Y-%m-%dT%H:%M:%SZ', datetime(min(timestamp), 'unixepoch')) AS minTimestamp,
+        strftime('%Y-%m-%dT%H:%M:%SZ', datetime(max(timestamp), 'unixepoch')) AS maxTimestamp
+      FROM med
+      GROUP BY
+        mediaGroupID,
+        deploymentID
+    ) AS med
+    ON obs.mediaGroupID = med.mediaGroupID
+  LEFT JOIN dep
+    ON med.deploymentID = dep.deploymentID
+"
+```
+
+## Image based
+
+```{r}
+dep <- read_csv(here("data", "raw", "mediaGroupID", "deployments.csv"))
+med <- read_csv(here("data", "raw", "mediaGroupID", "media_image_based.csv"))
+obs <- read_csv(here("data", "raw", "mediaGroupID", "observations_image_based.csv"))
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "dep", dep)
+DBI::dbWriteTable(con, "med", med)
+DBI::dbWriteTable(con, "obs", obs)
+data_mediaGroupID_image_based <- DBI::dbGetQuery(con, sql_mediaGroupID)
+write_csv(data_mediaGroupID_image_based, here("data", "processed", "data_mediaGroupID_image_based.csv"), na = "")
+```
+
+## Sequence based
+
+```{r}
+dep <- read_csv(here("data", "raw", "mediaGroupID", "deployments.csv"))
+med <- read_csv(here("data", "raw", "mediaGroupID", "media_seq_based.csv"))
+obs <- read_csv(here("data", "raw", "mediaGroupID", "observations_seq_based.csv"))
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "dep", dep)
+DBI::dbWriteTable(con, "med", med)
+DBI::dbWriteTable(con, "obs", obs)
+data_mediaGroupID_seq_based <- DBI::dbGetQuery(con, sql_mediaGroupID)
+write_csv(data_mediaGroupID_image_based, here("data", "processed", "data_mediaGroupID_seq_based.csv"), na = "")
+```
+
+# parentMediaID approach
+
+```{r}
+sql_parentMediaID <- "
+SELECT
+  obs.observationID,
+  obs.scientificName,
+  CASE
+    WHEN med.timestamp NOT NULL THEN strftime('%Y-%m-%dT%H:%M:%SZ', datetime(med.timestamp, 'unixepoch'))
+    ELSE med_children.minTimestamp
+  END AS minTimestamp,
+  CASE
+    WHEN med.timestamp NOT NULL THEN strftime('%Y-%m-%dT%H:%M:%SZ', datetime(med.timestamp, 'unixepoch'))
+    ELSE med_children.maxTimestamp
+  END AS maxTimestamp,
+  dep.deploymentID
+FROM
+  obs
+  LEFT JOIN med
+    ON obs.mediaID = med.mediaID
+  LEFT JOIN (
+      SELECT
+        parentMediaID,
+        deploymentID,
+        strftime('%Y-%m-%dT%H:%M:%SZ', datetime(min(timestamp), 'unixepoch')) AS minTimestamp,
+        strftime('%Y-%m-%dT%H:%M:%SZ', datetime(max(timestamp), 'unixepoch')) AS maxTimestamp
+      FROM med
+      GROUP BY
+        parentMediaID,
+        deploymentID
+    ) AS med_children
+    ON med.mediaID = med_children.parentMediaID
+  LEFT JOIN dep
+    ON med.deploymentID = dep.deploymentID
+"
+```
+
+## Image based
+
+```{r}
+dep <- read_csv(here("data", "raw", "parentMediaID", "deployments.csv"))
+med <- read_csv(here("data", "raw", "parentMediaID", "media.csv"))
+obs <- read_csv(here("data", "raw", "parentMediaID", "observations_image_based.csv"))
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "dep", dep)
+DBI::dbWriteTable(con, "med", med)
+DBI::dbWriteTable(con, "obs", obs)
+data_parentMediaID_image_based <- DBI::dbGetQuery(con, sql_parentMediaID)
+write_csv(data_parentMediaID_image_based, here("data", "processed", "data_parentMediaID_image_based.csv"), na = "")
+```
+
+## Sequence based
+
+```{r}
+dep <- read_csv(here("data", "raw", "parentMediaID", "deployments.csv"))
+med <- read_csv(here("data", "raw", "parentMediaID", "media.csv"))
+obs <- read_csv(here("data", "raw", "parentMediaID", "observations_seq_based.csv"))
+con <- DBI::dbConnect(RSQLite::SQLite(), ":memory:")
+DBI::dbWriteTable(con, "dep", dep)
+DBI::dbWriteTable(con, "med", med)
+DBI::dbWriteTable(con, "obs", obs)
+data_parentMediaID_seq_based <- DBI::dbGetQuery(con, sql_parentMediaID)
+write_csv(data_parentMediaID_seq_based, here("data", "processed", "data_parentMediaID_seq_based.csv"), na = "")
+```
+
+# Compare
+
+```{r}
+setdiff(data_mediaGroupID_image_based, data_parentMediaID_image_based)
+```
+
+```{r}
+setdiff(data_mediaGroupID_seq_based, data_parentMediaID_seq_based)
+```
+
