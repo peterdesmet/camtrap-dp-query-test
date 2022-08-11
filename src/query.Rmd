@@ -72,7 +72,7 @@ DBI::dbWriteTable(con, "dep", dep)
 DBI::dbWriteTable(con, "med", med)
 DBI::dbWriteTable(con, "obs", obs)
 data_mediaGroupID_seq_based <- DBI::dbGetQuery(con, sql_mediaGroupID)
-write_csv(data_mediaGroupID_image_based, here("data", "processed", "data_mediaGroupID_seq_based.csv"), na = "")
+write_csv(data_mediaGroupID_seq_based, here("data", "processed", "data_mediaGroupID_seq_based.csv"), na = "")
 ```
 
 # parentMediaID approach
