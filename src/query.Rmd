@@ -26,6 +26,7 @@ SELECT
   obs.scientificName,
   med.minTimestamp,
   med.maxTimestamp,
+  med.sequenceID AS sequenceID,
   dep.deploymentID
 FROM
   obs
@@ -33,12 +34,14 @@ FROM
     (
       SELECT
         mediaGroupID,
+        sequenceID,
         deploymentID,
         strftime('%Y-%m-%dT%H:%M:%SZ', datetime(min(timestamp), 'unixepoch')) AS minTimestamp,
         strftime('%Y-%m-%dT%H:%M:%SZ', datetime(max(timestamp), 'unixepoch')) AS maxTimestamp
       FROM med
       GROUP BY
         mediaGroupID,
+        sequenceID,
         deploymentID
     ) AS med
     ON obs.mediaGroupID = med.mediaGroupID
@@ -90,6 +93,10 @@ SELECT
     WHEN med.timestamp NOT NULL THEN strftime('%Y-%m-%dT%H:%M:%SZ', datetime(med.timestamp, 'unixepoch'))
     ELSE med_children.maxTimestamp
   END AS maxTimestamp,
+  CASE
+    WHEN med.parentMediaID NOT NULL THEN med.parentMediaID
+    ELSE med_children.parentMediaID
+  END AS sequenceID,
   dep.deploymentID
 FROM
   obs
